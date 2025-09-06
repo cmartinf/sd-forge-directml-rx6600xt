@@ -1,57 +1,110 @@
-huggingface_space_mirror/
-random_test.py
-__pycache__
+# =========================
+# Sistema / IDE / OS
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+__pycache__/
+.vscode/
+.idea/
+
+# =========================
+# Python / entorno
+# =========================
+venv/
+.venv/
+*.pyc
+*.pyo
+*.pyd
+*.coverage*
+coverage.xml
+
+# Variables de entorno locales
+.env
+.env.*
+
+# =========================
+# SD Forge / pesos / modelos
+# (no subir modelos pesados)
+# =========================
 *.ckpt
 *.safetensors
 *.pth
-*.dev.js
+model.ckpt
+
+# Carpeta de modelos completa fuera del repo
+/models/**
+!/models/.gitkeep
+
+# GFPGAN / ESRGAN / SwinIR / repos auxiliares
+/GFPGANv1.3.pth
+/gfpgan/weights/*.pth
+/ESRGAN/*
+/SwinIR/*
+/SwinIR
+/repositories
+
+# Embeddings, TI, etc.
+/embeddings
+/textual_inversion
+/interrogate
+
+# =========================
+# Salidas / caches / logs
+# =========================
+/output/
+/outputs/
+/tmp/
+# /temp/  <- no lo usás; opcional
+/test/test_outputs
+/test/stdout.txt
+/test/stderr.txt
+/log
+/logs
+*.log
+/cache
+/cache.json*
+trace.json
+/sysinfo-????-??-??-??-??.json
+/test/results.xml
+
+# Gradio/Forge settings locales
+/ui-config.json
+/config.json
+/webui.settings.bat
+/webui-user.bat
+/webui-user.sh
+/user.css
+/styles.csv
+/styles.csv.bak
+/params.txt
+/config_states/
+/node_modules
+/package-lock.json
+
+# =========================
+# Cosas específicas del repo original
+# =========================
+huggingface_space_mirror/
+random_test.py
 *_s.py
 *_u.py
 *_m.py
 *_i.py
-.DS_Store
-/output/
-/outputs/
-/ESRGAN/*
-/SwinIR/*
-/repositories
-/venv
-/tmp
-/output
-/model.ckpt
-/models/**/*
-/GFPGANv1.3.pth
-/gfpgan/weights/*.pth
-/ui-config.json
-/outputs
-/config.json
-/log
-/webui.settings.bat
-/embeddings
-/styles.csv
-/params.txt
-/styles.csv.bak
-/webui-user.bat
-/webui-user.sh
-/interrogate
-/user.css
-/.idea
-notification.mp3
-/SwinIR
-/textual_inversion
-.vscode
+
+# =========================
+# Extensiones (si no querés subirlas)
 /extensions
-/test/stdout.txt
-/test/stderr.txt
-/cache.json*
-/config_states/
-/node_modules
-/package-lock.json
-/.coverage*
-/test/test_outputs
-/cache
-trace.json
-/sysinfo-????-??-??-??-??.json
-/test/results.xml
-coverage.xml
-**/tests/**/expectations
+# =========================
+
+# =========================
+# Mantener NUESTROS scripts .bat y .ps1
+# =========================
+# Asegurar que no se ignoran (por si alguna regla anterior es amplia)
+!scripts/
+!scripts/*.bat
+!scripts/*.ps1
+
+# Si querés preservar carpetas vacías en otras rutas ignoradas:
+# !embeddings/.gitkeep
+# !outputs/.gitkeep
