@@ -1,213 +1,245 @@
-# Stable Diffusion WebUI Forge
+# SD Forge + DirectML on AMD (RX 6600 XT)
 
-Stable Diffusion WebUI Forge is a platform on top of [Stable Diffusion WebUI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) (based on [Gradio](https://www.gradio.app/) <a href='https://github.com/gradio-app/gradio'><img src='https://img.shields.io/github/stars/gradio-app/gradio'></a>) to make development easier, optimize resource management, speed up inference, and study experimental features.
+Turn‑key setup to run **Stable Diffusion Forge** on Windows with **DirectML** on an **AMD Radeon RX 6600 XT (8 GB)**. Includes four launch profiles (Low / Medium / High / XL), memory tuning, and attention strategies that avoid the classic *Could not allocate tensor… not enough GPU video memory* crashes.
 
-The name "Forge" is inspired from "Minecraft Forge". This project is aimed at becoming SD WebUI's Forge.
+> ✅ Tested with Python **3.10.6**, Forge **f2.0.1v1.10.1‑previous‑669**, PyTorch **2.4.1+cpu** + **torch‑directml**, Windows 10/11, VRAM 8 GB.
 
-Forge is currently based on SD-WebUI 1.10.1 at [this commit](https://github.com/AUTOMATIC1111/stable-diffusion-webui/commit/82a973c04367123ae98bd9abdf80d9eda9b910e2). (Because original SD-WebUI is almost static now, Forge will sync with original WebUI every 90 days, or when important fixes.)
+---
 
-News are moved to this link: [Click here to see the News section](https://github.com/lllyasviel/stable-diffusion-webui-forge/blob/main/NEWS.md)
+## What’s in here
 
-# Quick List
+* **Four launchers** (`run_low.bat`, `run_medium.bat`, `run_high.bat`, `run_xl.bat`) tuned for 8 GB AMD cards.
+* **DirectML device selection** (use device 0 by default; configurable).
+* **Stable attention modes**:
 
-[Gradio 4 UI Must Read (TLDR: You need to use RIGHT MOUSE BUTTON to move canvas!)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/853)
+  * *Split attention* (very VRAM‑friendly; safer on DirectML).
+  * *Sub‑quadratic attention* (aggressive; use when it works on your setup).
+* **VAE on CPU** to save VRAM (`--vae-in-cpu`).
+* **Low/No‑VRAM strategies** (`--always-low-vram`, optional `--always-offload-from-vram`).
+* **Softmax budget** via `inference_memory` (matrix compute pool) set around **2 GB** for 8 GB cards.
 
-[Flux Tutorial (BitsandBytes Models, NF4, "GPU Weight", "Offload Location", "Offload Method", etc)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/981)
+---
 
-[Flux Tutorial 2 (Seperated Full Models, GGUF, Technically Correct Comparison between GGUF and NF4, etc)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1050)
+## Folder layout
 
-[Forge Extension List and Extension Replacement List (Temporary)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1754)
+Place the BAT files **at the root of your Forge checkout** (same level as `launch.py`). Example:
 
-[How to make LoRAs more precise on low-bit models; How to Skip" Patching LoRAs"; How to only load LoRA one time rather than each generation; How to report LoRAs that do not work](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1038)
-
-[Report Flux Performance Problems (TLDR: DO NOT set "GPU Weight" too high! Lower "GPU Weight" solves 99% problems!)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1181)
-
-[How to solve "Connection errored out" / "Press anykey to continue ..." / etc](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1474)
-
-[(Save Flux BitsandBytes UNet/Checkpoint)](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1224#discussioncomment-10384104)
-
-[LayerDiffuse Transparent Image Editing](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/854)
-
-[Tell us what is missing in ControlNet Integrated](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/932)
-
-[(Policy) Soft Advertisement Removal Policy](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/1286)
-
-(Flux BNB NF4 / GGUF Q8_0/Q5_0/Q5_1/Q4_0/Q4_1 are all natively supported with GPU weight slider and Quene/Async Swap toggle and swap location toggle. All Flux BNB NF4 / GGUF Q8_0/Q5_0/Q4_0 have LoRA support.)
-
-# Installing Forge
-
-**Just use this one-click installation package (with git and python included).**
-
-[>>> Click Here to Download One-Click Package (CUDA 12.1 + Pytorch 2.3.1) <<<](https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/download/latest/webui_forge_cu121_torch231.7z)
-
-Some other CUDA/Torch Versions:
-
-[Forge with CUDA 12.1 + Pytorch 2.3.1](https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/download/latest/webui_forge_cu121_torch231.7z) <- **Recommended**
-
-[Forge with CUDA 12.4 + Pytorch 2.4](https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/download/latest/webui_forge_cu124_torch24.7z) <- **Fastest**, but MSVC may be broken, xformers may not work
-
-[Forge with CUDA 12.1 + Pytorch 2.1](https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/download/latest/webui_forge_cu121_torch21.7z) <- the previously used old environments
-
-After you download, you uncompress, use `update.bat` to update, and use `run.bat` to run.
-
-Note that running `update.bat` is important, otherwise you may be using a previous version with potential bugs unfixed.
-
-![image](https://github.com/lllyasviel/stable-diffusion-webui-forge/assets/19834515/c49bd60d-82bd-4086-9859-88d472582b94)
-
-### Advanced Install
-
-If you are proficient in Git and you want to install Forge as another branch of SD-WebUI, please see [here](https://github.com/continue-revolution/sd-webui-animatediff/blob/forge/master/docs/how-to-use.md#you-have-a1111-and-you-know-git). In this way, you can reuse all SD checkpoints and all extensions you installed previously in your OG SD-WebUI, but you should know what you are doing.
-
-If you know what you are doing, you can also install Forge using same method as SD-WebUI. (Install Git, Python, Git Clone the forge repo `https://github.com/lllyasviel/stable-diffusion-webui-forge.git` and then run webui-user.bat).
-
-### Previous Versions
-
-You can download previous versions [here](https://github.com/lllyasviel/stable-diffusion-webui-forge/discussions/849).
-
-# Forge Status
-
-Based on manual test one-by-one:
-
-| Component                                           | Status                                      | Last Test    |
-|-----------------------------------------------------|---------------------------------------------|--------------|
-| Basic Diffusion                                     | Normal                                      | 2024 Aug 26  |
-| GPU Memory Management System                        | Normal                                      | 2024 Aug 26  |
-| LoRAs                                               | Normal                                      | 2024 Aug 26  |
-| All Preprocessors                                   | Normal                                      | 2024 Aug 26  |
-| All ControlNets                                     | Normal                                      | 2024 Aug 26  |
-| All IP-Adapters                                     | Normal                                      | 2024 Aug 26  |
-| All Instant-IDs                                     | Normal                                      | 2024 July 27 |
-| All Reference-only Methods                          | Normal                                      | 2024 July 27 |
-| All Integrated Extensions                           | Normal                                      | 2024 July 27 |
-| Popular Extensions (Adetailer, etc)                 | Normal                                      | 2024 July 27 |
-| Gradio 4 UIs                                        | Normal                                      | 2024 July 27 |
-| Gradio 4 Forge Canvas                               | Normal                                      | 2024 Aug 26  |
-| LoRA/Checkpoint Selection UI for Gradio 4           | Normal                                      | 2024 July 27 |
-| Photopea/OpenposeEditor/etc for ControlNet          | Normal                                      | 2024 July 27 |
-| Wacom 128 level touch pressure support for Canvas   | Normal                                      | 2024 July 15 |
-| Microsoft Surface touch pressure support for Canvas | Broken, pending fix                         | 2024 July 29 |
-| ControlNets (Union)                                 | Not implemented yet, pending implementation | 2024 Aug 26  |
-| ControlNets (Flux)                                  | Not implemented yet, pending implementation | 2024 Aug 26  |
-| API endpoints (txt2img, img2img, etc)               | Normal, but pending improved Flux support   | 2024 Aug 29  |
-| OFT LoRAs                                           | Broken, pending fix                         | 2024 Sep 9   |
-
-Feel free to open issue if anything is broken and I will take a look every several days. If I do not update this "Forge Status" then it means I cannot reproduce any problem. In that case, fresh re-install should help most.
-
-# UnetPatcher
-
-Below are self-supported **single file** of all codes to implement FreeU V2.
-
-See also `extension-builtin/sd_forge_freeu/scripts/forge_freeu.py`:
-
-```python
-import torch
-import gradio as gr
-
-from modules import scripts
-
-
-def Fourier_filter(x, threshold, scale):
-    # FFT
-    x_freq = torch.fft.fftn(x.float(), dim=(-2, -1))
-    x_freq = torch.fft.fftshift(x_freq, dim=(-2, -1))
-
-    B, C, H, W = x_freq.shape
-    mask = torch.ones((B, C, H, W), device=x.device)
-
-    crow, ccol = H // 2, W // 2
-    mask[..., crow - threshold:crow + threshold, ccol - threshold:ccol + threshold] = scale
-    x_freq = x_freq * mask
-
-    # IFFT
-    x_freq = torch.fft.ifftshift(x_freq, dim=(-2, -1))
-    x_filtered = torch.fft.ifftn(x_freq, dim=(-2, -1)).real
-
-    return x_filtered.to(x.dtype)
-
-
-def patch_freeu_v2(unet_patcher, b1, b2, s1, s2):
-    model_channels = unet_patcher.model.diffusion_model.config["model_channels"]
-    scale_dict = {model_channels * 4: (b1, s1), model_channels * 2: (b2, s2)}
-    on_cpu_devices = {}
-
-    def output_block_patch(h, hsp, transformer_options):
-        scale = scale_dict.get(h.shape[1], None)
-        if scale is not None:
-            hidden_mean = h.mean(1).unsqueeze(1)
-            B = hidden_mean.shape[0]
-            hidden_max, _ = torch.max(hidden_mean.view(B, -1), dim=-1, keepdim=True)
-            hidden_min, _ = torch.min(hidden_mean.view(B, -1), dim=-1, keepdim=True)
-            hidden_mean = (hidden_mean - hidden_min.unsqueeze(2).unsqueeze(3)) / (hidden_max - hidden_min).unsqueeze(2).unsqueeze(3)
-
-            h[:, :h.shape[1] // 2] = h[:, :h.shape[1] // 2] * ((scale[0] - 1) * hidden_mean + 1)
-
-            if hsp.device not in on_cpu_devices:
-                try:
-                    hsp = Fourier_filter(hsp, threshold=1, scale=scale[1])
-                except:
-                    print("Device", hsp.device, "does not support the torch.fft.")
-                    on_cpu_devices[hsp.device] = True
-                    hsp = Fourier_filter(hsp.cpu(), threshold=1, scale=scale[1]).to(hsp.device)
-            else:
-                hsp = Fourier_filter(hsp.cpu(), threshold=1, scale=scale[1]).to(hsp.device)
-
-        return h, hsp
-
-    m = unet_patcher.clone()
-    m.set_model_output_block_patch(output_block_patch)
-    return m
-
-
-class FreeUForForge(scripts.Script):
-    sorting_priority = 12  # It will be the 12th item on UI.
-
-    def title(self):
-        return "FreeU Integrated"
-
-    def show(self, is_img2img):
-        # make this extension visible in both txt2img and img2img tab.
-        return scripts.AlwaysVisible
-
-    def ui(self, *args, **kwargs):
-        with gr.Accordion(open=False, label=self.title()):
-            freeu_enabled = gr.Checkbox(label='Enabled', value=False)
-            freeu_b1 = gr.Slider(label='B1', minimum=0, maximum=2, step=0.01, value=1.01)
-            freeu_b2 = gr.Slider(label='B2', minimum=0, maximum=2, step=0.01, value=1.02)
-            freeu_s1 = gr.Slider(label='S1', minimum=0, maximum=4, step=0.01, value=0.99)
-            freeu_s2 = gr.Slider(label='S2', minimum=0, maximum=4, step=0.01, value=0.95)
-
-        return freeu_enabled, freeu_b1, freeu_b2, freeu_s1, freeu_s2
-
-    def process_before_every_sampling(self, p, *script_args, **kwargs):
-        # This will be called before every sampling.
-        # If you use highres fix, this will be called twice.
-
-        freeu_enabled, freeu_b1, freeu_b2, freeu_s1, freeu_s2 = script_args
-
-        if not freeu_enabled:
-            return
-
-        unet = p.sd_model.forge_objects.unet
-
-        unet = patch_freeu_v2(unet, freeu_b1, freeu_b2, freeu_s1, freeu_s2)
-
-        p.sd_model.forge_objects.unet = unet
-
-        # Below codes will add some logs to the texts below the image outputs on UI.
-        # The extra_generation_params does not influence results.
-        p.extra_generation_params.update(dict(
-            freeu_enabled=freeu_enabled,
-            freeu_b1=freeu_b1,
-            freeu_b2=freeu_b2,
-            freeu_s1=freeu_s1,
-            freeu_s2=freeu_s2,
-        ))
-
-        return
+```
+D:\AI\sd-forge-RX6600XT\
+├─ launch.py
+├─ webui-user.bat
+├─ venv\
+├─ models\
+├─ run_low.bat
+├─ run_medium.bat
+├─ run_high.bat
+└─ run_xl.bat
 ```
 
-See also [Forge's Unet Implementation](https://github.com/lllyasviel/stable-diffusion-webui-forge/blob/main/backend/nn/unet.py).
+> If you prefer a subfolder (e.g., `scripts\`), adjust the `pushd`/`PYTHON` lines to point back to the repo root.
 
-# Under Construction
+---
 
-WebUI Forge is now under some constructions, and docs / UI / functionality may change with updates.
+## Requirements
+
+* **Python 3.10.6** (exact minor matters for Forge).
+* A cloned **sd-forge** repo.
+* **torch-directml** (the BATs check and install automatically if missing).
+* An AMD GPU with **8 GB VRAM** (tested on **RX 6600 XT**).
+
+---
+
+## Launch profiles
+
+Each BAT prints its profile banner and the resolved arguments before launching.
+
+### 1) Low (safest)
+
+* Best chance to avoid OOM.
+* Forces split attention and optional VRAM offload.
+* `inference_memory` ≈ **1792 MB**.
+
+**Flags (summary):**
+
+```
+--directml 0 --skip-install --skip-torch-cuda-test --precision full --no-half \
+--always-low-vram --always-offload-from-vram --vae-in-cpu --attention-split
+```
+
+### 2) Medium (recommended)
+
+* Split attention, no forced offload.
+* `inference_memory` ≈ **2048 MB**.
+
+**Flags (summary):**
+
+```
+--directml 0 --skip-install --skip-torch-cuda-test --precision full --no-half \
+--always-low-vram --vae-in-cpu --attention-split
+```
+
+### 3) High (more aggressive)
+
+* Tries **sub‑quadratic attention** (faster when it fits), still Low‑VRAM + VAE on CPU.
+* Keep an eye on OOM messages; fall back to Medium if needed.
+
+**Flags (summary):**
+
+```
+--directml 0 --skip-install --skip-torch-cuda-test --precision full --no-half \
+--always-low-vram --vae-in-cpu --opt-sub-quad-attention
+```
+
+### 4) XL (fast path on our setup)
+
+* Tuned set that ran quickest in our tests at 512×640 / 20 steps.
+* Use when everything else is stable and you want throughput.
+
+**Flags (summary):**
+
+```
+--directml 0 --skip-install --skip-torch-cuda-test --precision full --no-half \
+--always-low-vram --vae-in-cpu --opt-sub-quad-attention
+```
+
+> **Note:** Some Forge builds expose the flag as `--opt-sub-quad-attention`, others enable sub‑quad automatically when available. If you see “unrecognized argument”, switch to the Medium profile (split attention) or remove the flag.
+
+---
+
+## How memory is managed
+
+* **Weights vs compute budget**: Forge logs something like:
+
+  * *“You will use 87.50% GPU memory to load weights, and 12.50% for matrix computation.”*
+
+* We explicitly set a compute pool via the env var `inference_memory` (**MB**). Our launchers aim for **\~2 GB** (or \~1.75 GB for Low). If you still see OOM around `torch.baddbmm` / softmax:
+
+  1. Lower resolution (e.g., from **512×640 → 512×512**).
+  2. Switch to **Medium/Low** profile.
+  3. Reduce `inference_memory` to **1536** or **1280** MB.
+  4. Avoid **Hires. fix** for now on DirectML (costly).
+
+* **VAE on CPU**: saves a meaningful chunk of VRAM on 8 GB cards and is stable with DirectML.
+
+* **xFormers**: not required on DirectML; those warnings can be ignored.
+
+---
+
+## Model used in testing
+
+* **Checkpoint**: `realisticVisionV60B1_v60B1VAE.safetensors`
+* Resolution baseline: **512×640**, **20 steps**, **CFG 7**, sampler **Euler a** or **DPM++ 2M**.
+
+### Sample prompts
+
+**Positive**
+
+```
+a medium dog sitting on a mat in a leafy park, green collar, photorealistic, 85mm, high detail
+```
+
+**Negative**
+
+```
+text, watermark, extra limbs, deformed, blurry, lowres
+```
+
+**Samurai example**
+
+```
+A lone samurai in traditional armor, standing before a rising sun flag motif,
+cinematic lighting, misty Japanese landscape, long katana, intricate details,
+sharp focus, 85mm, photorealistic, volumetric light, high dynamic range
+```
+
+---
+
+## Quick start
+
+1. Copy the four `run_*.bat` files into your Forge root.
+2. Double‑click the profile you want (Low/Medium/High/XL).
+3. Open the Gradio URL shown (usually `http://127.0.0.1:7860`).
+4. Start with **512×640**, **20 steps**, **CFG 7**, **batch size 1**.
+
+> The launchers will auto‑install **torch‑directml** if missing.
+
+---
+
+## Troubleshooting
+
+### "Could not allocate tensor … 1,342,177,280 bytes"
+
+This is a softmax/attention burst. Try:
+
+* Switch to **Medium** (split attention) or **Low** (adds offload).
+* Reduce resolution or steps; keep batch size at **1**.
+* Lower `inference_memory` (e.g., 2048 → 1792 → 1536 MB).
+
+### "xformers not found"
+
+Safe to ignore on **DirectML**—we don’t use xFormers in these profiles.
+
+### Memory monitor disabled / CUDA warnings
+
+Expected with **PyTorch+CPU + DirectML bridge**. Not a problem.
+
+### Where to change the DirectML device
+
+Edit the BAT: set `DML_DEVICE=0` (or leave empty for default). Use `1` if you have multiple GPUs.
+
+---
+
+## Bench notes (indicative only)
+
+Observed on RX 6600 XT, 512×640, 20 steps (single image):
+
+| Profile | Attention | Offload | Softmax pool | Outcome (logs)                                               |
+| ------- | --------- | ------: | -----------: | ------------------------------------------------------------ |
+| Low     | Split     |     Yes |    \~1792 MB | Stable, slowest, few OOM retries then completes              |
+| Medium  | Split     |      No |    \~2048 MB | Stable in most runs; occasional softmax retries              |
+| High    | Sub‑quad  |      No |    \~2048 MB | Can be fastest **when** it fits; otherwise OOMs → use Medium |
+| XL      | Sub‑quad  |      No |    \~2048 MB | Fast path on our setup; use after verifying stability        |
+
+> Your times will vary by driver, background apps, and model.
+
+---
+
+## License & model rights
+
+* **Repo code**: recommended to ship under **MIT License** (see `LICENSE` in the repo).
+* **Model files** (e.g., `realisticVisionV60B1_v60B1VAE.safetensors`) are **not included**. Respect the model’s original license and distribution terms.
+
+Template `LICENSE` (MIT):
+
+```
+MIT License
+
+Copyright (c) 2025 <Your Name>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## Credits
+
+* **Stable Diffusion Forge** and its authors.
+* Everyone hacking on DirectML + AMD workflows.
+
+If you tweak the launchers for other AMD cards (6700/6800/7800, etc.), PRs welcome! ✨

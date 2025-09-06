@@ -430,13 +430,28 @@ def prepare_environment():
 
     if args.use_ipex:
         args.skip_torch_cuda_test = True
-    if not args.skip_torch_cuda_test and not check_run_python("import torch; assert torch.cuda.is_available()"):
-        raise RuntimeError(
-            'Your device does not support the current version of Torch/CUDA! Consider download another version: \n'
-            'https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/tag/latest'
-            # 'Torch is not able to use GPU; '
-            # 'add --skip-torch-cuda-test to COMMANDLINE_ARGS variable to disable this check'
-        )
+
+# --- Soporte DirectML: si se pidió DML y está disponible, saltar test CUDA ---
+_directml_requested = bool(getattr(args, "use_directml", False) or getattr(args, "directml", None) is not None)
+if _directml_requested:
+    try:
+        import importlib
+        if importlib.util.find_spec("torch_directml") is not None:
+            args.skip_torch_cuda_test = True
+            print("Forge: DirectML detectado -> se omite chequeo Torch/CUDA.")
+    except Exception:
+        pass
+# ------------------------------------------------------------------------------
+
+if (not args.skip_torch_cuda_test
+    and not _directml_requested
+    and not check_run_python("import torch; assert torch.cuda.is_available()")):
+    raise RuntimeError(
+        'Your device does not support the current version of Torch/CUDA! Consider download another version: \n'
+        'https://github.com/lllyasviel/stable-diffusion-webui-forge/releases/tag/latest'
+        # 'Torch is not able to use GPU; '
+        # 'add --skip-torch-cuda-test to COMMANDLINE_ARGS variable to disable this check'
+    )
     startup_timer.record("torch GPU test")
 
     if not is_installed("clip"):
